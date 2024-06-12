@@ -47,3 +47,7 @@ func (r *resolverBytes) Write(buf []byte) (int, error) {
 func (r *resolverBytes) Close() error {
 	return r.r.Close()
 }
+
+func (r *resolverBytes) Alive() bool {
+	return r.r.Alive()
+}

@@ -15,16 +15,16 @@ type resolverMulti[T any] struct {
 	mu sync.Mutex
 }
 
-// NewSingle creates a new Resolver with the given timeout.
 func NewMulti[T any](timeout time.Duration) Resolver[T] {
 	return &resolverMulti[T]{
 		timeout: timeout,
 
 		chData: make(chan T),
+
+		chClose: make(chan struct{}),
 	}
 }
 
-// Read reads the value or returns a timeout error if it cannot read within the given timeout.
 func (r *resolverMulti[T]) Read() (T, error) {
 	var ticker = time.NewTicker(r.timeout)
 	defer ticker.Stop()
@@ -43,7 +43,6 @@ func (r *resolverMulti[T]) Read() (T, error) {
 	}
 }
 
-// Write writes the value or returns a timeout error if it cannot write within the given timeout.
 func (r *resolverMulti[T]) Write(value T) error {
 	var ticker = time.NewTicker(r.timeout)
 	defer ticker.Stop()
@@ -60,7 +59,6 @@ func (r *resolverMulti[T]) Write(value T) error {
 	}
 }
 
-// Close closes the resolver.
 func (r *resolverMulti[T]) Close() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -72,4 +70,13 @@ func (r *resolverMulti[T]) Close() error {
 
 	close(r.chClose)
 	return nil
+}
+
+func (r *resolverMulti[T]) Alive() bool {
+	select {
+	case <-r.chClose:
+		return false
+	default:
+		return true
+	}
 }

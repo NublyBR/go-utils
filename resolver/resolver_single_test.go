@@ -45,7 +45,7 @@ func testExpect(t *testing.T, valRead, valReadExpect int, errRead, errReadExpect
 	}
 }
 
-var (
+const (
 	tHigh = 9 * time.Millisecond
 	tMed  = 6 * time.Millisecond
 	tLow  = 3 * time.Millisecond

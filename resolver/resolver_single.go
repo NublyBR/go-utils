@@ -15,7 +15,6 @@ type resolverSingle[T any] struct {
 	mu sync.Mutex
 }
 
-// NewSingle creates a new Resolver with the given timeout.
 func NewSingle[T any](timeout time.Duration) Resolver[T] {
 	return &resolverSingle[T]{
 		ticker: time.NewTicker(timeout),
@@ -26,7 +25,6 @@ func NewSingle[T any](timeout time.Duration) Resolver[T] {
 	}
 }
 
-// Read reads the value or returns a timeout error if it cannot read within the given timeout.
 func (r *resolverSingle[T]) Read() (T, error) {
 	select {
 	case <-r.chClose:
@@ -42,7 +40,6 @@ func (r *resolverSingle[T]) Read() (T, error) {
 	}
 }
 
-// Write writes the value or returns a timeout error if it cannot write within the given timeout.
 func (r *resolverSingle[T]) Write(value T) error {
 	select {
 	case <-r.chClose:
@@ -56,7 +53,6 @@ func (r *resolverSingle[T]) Write(value T) error {
 	}
 }
 
-// Close closes the resolver.
 func (r *resolverSingle[T]) Close() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -69,4 +65,13 @@ func (r *resolverSingle[T]) Close() error {
 	close(r.chClose)
 	r.ticker.Stop()
 	return nil
+}
+
+func (r *resolverSingle[T]) Alive() bool {
+	select {
+	case <-r.chClose:
+		return false
+	default:
+		return true
+	}
 }
