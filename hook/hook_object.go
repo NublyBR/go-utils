@@ -6,9 +6,12 @@ import (
 )
 
 type HookObject[T any] interface {
-	// Add adds a function to the hook
+	// Add adds a function to the hook, with optional target input and error output
 	//
+	//   hook.Add(func(target T, e Event) error { ... })
 	//   hook.Add(func(target T, e Event) { ... })
+	//   hook.Add(func(e Event) error { ... })
+	//   hook.Add(func(e Event) { ... })
 	Add(fn ...any)
 
 	// Run calls all the functions in the hook
@@ -34,12 +37,19 @@ func (h *hookObject[T]) add(fn any) {
 		panic("expected a function")
 	}
 
-	if t.NumIn() != 2 || t.NumOut() > 1 {
-		panic("expected a function with two inputs and an optional error output")
+	if t.NumIn() == 0 || t.NumIn() > 2 || t.NumOut() > 1 {
+		panic("expected a function with one to two inputs and an optional error output")
 	}
 
-	if t.In(0) != reflect.TypeOf((*T)(nil)).Elem() {
-		panic("expected the first input to be the target type")
+	var et reflect.Type
+
+	if t.NumIn() == 1 {
+		et = t.In(0)
+	} else {
+		et = t.In(1)
+		if t.In(0) != reflect.TypeOf((*T)(nil)).Elem() {
+			panic("expected the first input to be the target type")
+		}
 	}
 
 	if t.NumOut() == 1 && t.Out(0) != reflect.TypeOf((*error)(nil)).Elem() {
@@ -49,7 +59,7 @@ func (h *hookObject[T]) add(fn any) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	h.mp[t.In(1)] = append(h.mp[t.In(1)], reflect.ValueOf(fn))
+	h.mp[et] = append(h.mp[et], reflect.ValueOf(fn))
 }
 
 func (h *hookObject[T]) Add(fn ...any) {
@@ -64,7 +74,13 @@ func (h *hookObject[T]) Run(target T, obj any) (int, error) {
 	h.mu.Unlock()
 
 	for i, f := range v {
-		var res = f.Call([]reflect.Value{reflect.ValueOf(target), reflect.ValueOf(obj)})
+		var res []reflect.Value
+
+		if f.Type().NumIn() == 1 {
+			res = f.Call([]reflect.Value{reflect.ValueOf(obj)})
+		} else {
+			res = f.Call([]reflect.Value{reflect.ValueOf(target), reflect.ValueOf(obj)})
+		}
 
 		if len(res) > 0 {
 			return i + 1, res[0].Interface().(error)

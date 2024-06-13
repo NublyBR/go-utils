@@ -15,22 +15,23 @@ func TestHookObject(t *testing.T) {
 		target = Target{}
 		event  = Event{}
 
-		called bool
-		calls  int
-		err    error
+		num, calls int
+		err        error
 	)
 
 	hook.Add(func(t *Target, e Event) {
-		called = true
+		num++
+	}, func(e Event) {
+		num++
 	})
 
 	calls, err = hook.Run(&target, event)
-	if !called {
-		t.Error("Expected hook to be called")
+	if num != 2 {
+		t.Errorf("Expected both functions to be called, got %d", num)
 	}
 
-	if calls != 1 {
-		t.Errorf("Expected 1 call, got %d", calls)
+	if calls != 2 {
+		t.Errorf("Expected 2 calls, got %d", calls)
 	}
 
 	if err != nil {

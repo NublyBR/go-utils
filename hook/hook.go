@@ -6,8 +6,9 @@ import (
 )
 
 type Hook interface {
-	// Add adds a function to the hook
+	// Add adds a function to the hook, with optional error output
 	//
+	//   hook.Add(func(e Event) error { ... })
 	//   hook.Add(func(e Event) { ... })
 	Add(fn ...any)
 
