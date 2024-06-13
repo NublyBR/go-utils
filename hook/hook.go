@@ -9,12 +9,12 @@ type Hook interface {
 	// Add adds a function to the hook
 	//
 	//   hook.Add(func(e Event) { ... })
-	Add(fn any)
+	Add(fn ...any)
 
 	// Run calls all the functions in the hook
 	//
 	//   hook.Run(Event{})
-	Run(i any) int
+	Run(obj any) (int, error)
 }
 
 type hook struct {
@@ -29,14 +29,18 @@ func New() Hook {
 	}
 }
 
-func (h *hook) Add(fn any) {
+func (h *hook) add(fn any) {
 	t := reflect.TypeOf(fn)
 	if t.Kind() != reflect.Func {
 		panic("expected a function")
 	}
 
-	if t.NumIn() != 1 || t.NumOut() != 0 {
-		panic("expected a function with one input and no output")
+	if t.NumIn() != 1 || t.NumOut() > 1 {
+		panic("expected a function with one input and an optional error output")
+	}
+
+	if t.NumOut() == 1 && t.Out(0) != reflect.TypeOf((*error)(nil)).Elem() {
+		panic("expected an error output")
 	}
 
 	h.mu.Lock()
@@ -45,14 +49,24 @@ func (h *hook) Add(fn any) {
 	h.mp[t.In(0)] = append(h.mp[t.In(0)], reflect.ValueOf(fn))
 }
 
-func (h *hook) Run(i any) int {
+func (h *hook) Add(fn ...any) {
+	for _, f := range fn {
+		h.add(f)
+	}
+}
+
+func (h *hook) Run(obj any) (int, error) {
 	h.mu.Lock()
-	v := h.mp[reflect.TypeOf(i)]
+	v := h.mp[reflect.TypeOf(obj)]
 	h.mu.Unlock()
 
-	for _, f := range v {
-		f.Call([]reflect.Value{reflect.ValueOf(i)})
+	for i, f := range v {
+		var res = f.Call([]reflect.Value{reflect.ValueOf(obj)})
+
+		if len(res) > 0 {
+			return i + 1, res[0].Interface().(error)
+		}
 	}
 
-	return len(v)
+	return len(v), nil
 }
