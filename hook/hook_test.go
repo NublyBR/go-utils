@@ -2,6 +2,7 @@ package hook
 
 import (
 	"io"
+	"reflect"
 	"testing"
 )
 
@@ -97,5 +98,24 @@ func TestHookError(t *testing.T) {
 	_, err := hook.Run(A{})
 	if err != io.EOF {
 		t.Errorf("Expected error %v, got %v", io.EOF, err)
+	}
+}
+
+func TestHookHandlers(t *testing.T) {
+	var h = New()
+
+	h.Add(func(int) {}, func(string) {}, func(float32) {})
+
+	var (
+		handlers = h.Handlers()
+		expect   = h.(*hook).mp
+	)
+
+	if reflect.ValueOf(handlers).UnsafePointer() == reflect.ValueOf(expect).UnsafePointer() {
+		t.Error("Expected handlers to be copied")
+	}
+
+	if !reflect.DeepEqual(handlers, expect) {
+		t.Errorf("Expected %v, got %v", expect, handlers)
 	}
 }

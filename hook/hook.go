@@ -16,6 +16,9 @@ type Hook interface {
 	//
 	//   hook.Run(Event{})
 	Run(obj any) (int, error)
+
+	// Returns a copy of the handlers map
+	Handlers() map[reflect.Type][]reflect.Value
 }
 
 type hook struct {
@@ -70,4 +73,19 @@ func (h *hook) Run(obj any) (int, error) {
 	}
 
 	return len(v), nil
+}
+
+func (h *hook) Handlers() map[reflect.Type][]reflect.Value {
+	var m = make(map[reflect.Type][]reflect.Value, len(h.mp))
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for k, v := range h.mp {
+		var vc = make([]reflect.Value, len(v))
+		copy(vc, v)
+		m[k] = vc
+	}
+
+	return m
 }
