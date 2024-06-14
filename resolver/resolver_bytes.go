@@ -23,18 +23,24 @@ func (r *resolverBytes) Read(buf []byte) (int, error) {
 		return r.b.Read(buf)
 	}
 
-	var bytes, err = r.r.Read()
-	if err != nil {
-		if err == ErrClosed {
-			return 0, io.EOF
+	for {
+		var bytes, err = r.r.Read()
+		if err != nil {
+			if err == ErrClosed {
+				return 0, io.EOF
+			}
+			return 0, err
 		}
-		return 0, err
+
+		if len(bytes) == 0 {
+			continue
+		}
+
+		r.b.Reset()
+		r.b.Write(bytes)
+
+		return r.b.Read(buf)
 	}
-
-	r.b.Reset()
-	r.b.Write(bytes)
-
-	return r.b.Read(buf)
 }
 
 func (r *resolverBytes) Write(buf []byte) (int, error) {
