@@ -13,7 +13,7 @@ type resolverBytes struct {
 
 func NewBytes(timeout time.Duration) ResolverBytes {
 	return &resolverBytes{
-		r: NewSingle[[]byte](timeout),
+		r: NewMulti[[]byte](timeout),
 		b: bytes.NewBuffer(nil),
 	}
 }
